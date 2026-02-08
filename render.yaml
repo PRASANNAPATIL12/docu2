@@ -1,0 +1,22 @@
+services:
+  # Backend Service
+  - type: web
+    name: docubrain-backend
+    env: python
+    region: oregon
+    plan: free
+    branch: main
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: MONGO_URL
+        value: mongodb+srv://prasannagoudasp12_db_user:pTp3DGKPI5yAR96G@cluster0.lzkj7l1.mongodb.net/?appName=Cluster0
+      - key: DATABASE_NAME
+        value: docu
+      - key: GEMINI_API_KEY
+        value: AIzaSyDpsXHjyqHYMWWRu9yCPGCdEm7EBTjuTwA
+      - key: CORS_ORIGINS
+        value: "*"
+      - key: PORT
+        value: "8001"
