@@ -14,9 +14,9 @@ load_dotenv(ROOT_DIR / '.env')
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
-    print(f"✅ Gemini API configured with key: {GEMINI_API_KEY[:20]}...")
+    print(f"[OK] Gemini API configured with key: {GEMINI_API_KEY[:20]}...")
 else:
-    print("❌ GEMINI_API_KEY not found in environment variables")
+    print("[ERROR] GEMINI_API_KEY not found in environment variables")
 
 class GeminiEmbeddings:
     def __init__(self):
@@ -27,14 +27,14 @@ class GeminiEmbeddings:
         """Generate embeddings using Gemini Text Embeddings API"""
         try:
             if not texts:
-                print("❌ No texts provided for embedding generation")
+                print("[ERROR] No texts provided for embedding generation")
                 return []
 
             if not GEMINI_API_KEY:
-                print("❌ Gemini API key not configured, using fallback")
+                print("[ERROR] Gemini API key not configured, using fallback")
                 return self._fallback_embeddings(texts)
 
-            print(f"🔄 Generating Gemini embeddings for {len(texts)} texts...")
+            print(f"[PROCESSING] Generating Gemini embeddings for {len(texts)} texts...")
 
             # Generate embeddings for all texts
             embeddings = []
@@ -51,19 +51,19 @@ class GeminiEmbeddings:
                     embeddings.append(embedding)
 
                     if (i + 1) % 10 == 0:
-                        print(f"  ✅ Generated {i + 1}/{len(texts)} embeddings")
+                        print(f"  [OK] Generated {i + 1}/{len(texts)} embeddings")
 
                 except Exception as e:
-                    print(f"❌ Error generating embedding for text {i}: {e}")
+                    print(f"[ERROR] Error generating embedding for text {i}: {e}")
                     # Use zero vector as fallback for this text
                     embeddings.append([0.0] * self.embedding_dimension)
 
-            print(f"✅ Successfully generated {len(embeddings)} Gemini embeddings with dimension {self.embedding_dimension}")
+            print(f"[OK] Successfully generated {len(embeddings)} Gemini embeddings with dimension {self.embedding_dimension}")
 
             return embeddings
 
         except Exception as e:
-            print(f"❌ Gemini embedding error: {e}")
+            print(f"[ERROR] Gemini embedding error: {e}")
             # Fallback to simple embeddings
             return self._fallback_embeddings(texts)
 
@@ -71,14 +71,14 @@ class GeminiEmbeddings:
         """Get embedding for a single query"""
         try:
             if not query:
-                print("❌ Empty query provided")
+                print("[ERROR] Empty query provided")
                 return [0.0] * self.embedding_dimension
 
             if not GEMINI_API_KEY:
-                print("❌ Gemini API key not configured, using fallback")
+                print("[ERROR] Gemini API key not configured, using fallback")
                 return self._fallback_embeddings([query])[0]
 
-            print(f"🔄 Generating Gemini query embedding...")
+            print(f"[PROCESSING] Generating Gemini query embedding...")
 
             # Gemini API call for query embedding
             result = genai.embed_content(
@@ -89,12 +89,12 @@ class GeminiEmbeddings:
 
             embedding = result['embedding']
 
-            print(f"✅ Generated query embedding with dimension {len(embedding)}")
+            print(f"[OK] Generated query embedding with dimension {len(embedding)}")
 
             return embedding
 
         except Exception as e:
-            print(f"❌ Error generating query embedding: {e}")
+            print(f"[ERROR] Error generating query embedding: {e}")
             return self._fallback_embeddings([query])[0]
 
     def find_relevant_chunks(self, query: str, document_chunks: List[str],
@@ -102,18 +102,18 @@ class GeminiEmbeddings:
         """Find most relevant chunks using cosine similarity"""
         try:
             if not document_chunks or not document_embeddings:
-                print("❌ No document chunks or embeddings provided")
+                print("[ERROR] No document chunks or embeddings provided")
                 return []
 
             if len(document_chunks) != len(document_embeddings):
-                print(f"❌ Mismatch: {len(document_chunks)} chunks but {len(document_embeddings)} embeddings")
+                print(f"[ERROR] Mismatch: {len(document_chunks)} chunks but {len(document_embeddings)} embeddings")
                 return []
 
             # Get query embedding
             query_embedding = self.get_query_embedding(query)
 
             if not query_embedding or all(x == 0 for x in query_embedding):
-                print("❌ Failed to generate query embedding, using keyword search")
+                print("[ERROR] Failed to generate query embedding, using keyword search")
                 return self._simple_keyword_search(query, document_chunks, top_k)
 
             # Calculate cosine similarities
@@ -124,7 +124,7 @@ class GeminiEmbeddings:
                 try:
                     # Ensure same dimensions
                     if len(doc_emb) != len(query_embedding):
-                        print(f"⚠️ Dimension mismatch: query={len(query_embedding)}, doc={len(doc_emb)}")
+                        print(f"[WARNING] Dimension mismatch: query={len(query_embedding)}, doc={len(doc_emb)}")
                         continue
 
                     doc_emb_np = np.array(doc_emb).reshape(1, -1)
@@ -138,11 +138,11 @@ class GeminiEmbeddings:
                     similarities.append((i, similarity))
 
                 except Exception as e:
-                    print(f"❌ Error computing similarity for chunk {i}: {e}")
+                    print(f"[ERROR] Error computing similarity for chunk {i}: {e}")
                     continue
 
             if not similarities:
-                print("❌ No valid similarities computed, using keyword search")
+                print("[ERROR] No valid similarities computed, using keyword search")
                 return self._simple_keyword_search(query, document_chunks, top_k)
 
             # Sort by similarity and take top k
@@ -157,17 +157,17 @@ class GeminiEmbeddings:
                         'relevance_score': float(sim_score)
                     })
 
-            print(f"✅ Found {len(results)} relevant chunks with scores: {[r['relevance_score'] for r in results]}")
+            print(f"[OK] Found {len(results)} relevant chunks with scores: {[r['relevance_score'] for r in results]}")
 
             # If no results from embedding search, try keyword search
             if not results:
-                print("❌ No relevant chunks found with embeddings, trying keyword search")
+                print("[ERROR] No relevant chunks found with embeddings, trying keyword search")
                 return self._simple_keyword_search(query, document_chunks, top_k)
 
             return results
 
         except Exception as e:
-            print(f"❌ Error in relevance search: {e}")
+            print(f"[ERROR] Error in relevance search: {e}")
             # Fallback to simple keyword matching
             return self._simple_keyword_search(query, document_chunks, top_k)
 
@@ -201,17 +201,17 @@ class GeminiEmbeddings:
                         'relevance_score': score
                     })
 
-            print(f"✅ Keyword search found {len(results)} relevant chunks")
+            print(f"[OK] Keyword search found {len(results)} relevant chunks")
 
             return results
 
         except Exception as e:
-            print(f"❌ Error in keyword search: {e}")
+            print(f"[ERROR] Error in keyword search: {e}")
             return []
 
     def _fallback_embeddings(self, texts: List[str]) -> List[List[float]]:
         """Fallback: Simple word-based embeddings with fixed dimensions"""
-        print("⚠️ Using fallback embeddings (simple word vectors)")
+        print("[WARNING] Using fallback embeddings (simple word vectors)")
 
         # Create a fixed vocabulary from all texts
         all_words = set()

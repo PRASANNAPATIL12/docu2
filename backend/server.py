@@ -17,11 +17,11 @@ import io
 try:
     import google.generativeai as genai
     GEMINI_AVAILABLE = True
-    print("✅ Google Gemini loaded successfully")
+    print("[OK] Google Gemini loaded successfully")
 except ImportError as e:
     GEMINI_AVAILABLE = False
-    print(f"❌ Google Gemini not available: {e}")
-    print("⚠️ Falling back to simple responses")
+    print(f"[ERROR] Google Gemini not available: {e}")
+    print("[WARNING] Falling back to simple responses")
 
 # Import our modules
 from database import db
@@ -340,7 +340,7 @@ async def query_documents(query: QueryRequest, user_id: str = Depends(get_curren
                 'chunk_index': i
             })
     
-    print(f"🔍 Processing query for {len(documents)} documents with {len(all_chunks)} total chunks")
+    print(f"[SEARCH] Processing query for {len(documents)} documents with {len(all_chunks)} total chunks")
 
     # Find relevant chunks across all documents using Gemini embeddings
     all_relevant_chunks = []
@@ -363,7 +363,7 @@ async def query_documents(query: QueryRequest, user_id: str = Depends(get_curren
     
     if not all_relevant_chunks:
         # Try a more aggressive search approach
-        print("🔍 No relevant chunks found with standard search, trying enhanced keyword search")
+        print("[SEARCH] No relevant chunks found with standard search, trying enhanced keyword search")
         
         # Use enhanced keyword search across all documents
         for doc in documents:
@@ -384,7 +384,7 @@ async def query_documents(query: QueryRequest, user_id: str = Depends(get_curren
     all_relevant_chunks.sort(key=lambda x: x['relevance_score'], reverse=True)
     top_chunks = all_relevant_chunks[:5]
     
-    print(f"✅ Found {len(top_chunks)} relevant chunks for query")
+    print(f"[OK] Found {len(top_chunks)} relevant chunks for query")
     
     # Create context for LLM
     context = "\n\n".join([chunk['content'] for chunk in top_chunks])
@@ -426,7 +426,7 @@ app.include_router(api_router)
 @app.get("/")
 async def root():
     return {
-        "message": "DocuBrain API is running! 🧠",
+        "message": "DocuBrain API is running! [BRAIN]",
         "version": "1.0.0",
         "endpoints": {
             "register": "POST /api/auth/register",

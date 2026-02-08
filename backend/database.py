@@ -24,9 +24,9 @@ class Database:
             self.db = self.client[DATABASE_NAME]
             # Test the connection
             await self.client.admin.command('ping')
-            print(f"✅ Successfully connected to MongoDB database: {DATABASE_NAME}")
+            print(f"[OK] Successfully connected to MongoDB database: {DATABASE_NAME}")
         except Exception as e:
-            print(f"❌ Failed to connect to MongoDB: {e}")
+            print(f"[ERROR] Failed to connect to MongoDB: {e}")
             raise e
     
     async def create_user(self, user_data: Dict[str, Any]) -> bool:
