@@ -1,0 +1,108 @@
+================================================================
+  DOCUBRAIN - COMMANDS TO RUN LOCALLY IN VS CODE
+================================================================
+
+STEP 1: OPEN PROJECT IN VS CODE
+--------------------------------
+cd C:\Users\prasannagoudap\Downloads\4.askmydocs-main\4.askmydocs-main
+code .
+
+
+STEP 2: OPEN TWO TERMINALS IN VS CODE
+--------------------------------------
+Press: Ctrl + `  (for first terminal)
+Click: + button (for second terminal)
+
+
+STEP 3: TERMINAL 1 - START BACKEND
+-----------------------------------
+cd backend
+pip install fastapi uvicorn motor google-generativeai PyPDF2 python-dotenv scikit-learn numpy python-multipart
+python -m uvicorn server:app --port 8001 --reload
+
+Expected output:
+[OK] Google Gemini loaded successfully
+[OK] Gemini API configured with key: AIzaSyDpsXHjyqHYMWWR...
+[OK] Successfully connected to MongoDB database: docu
+INFO: Uvicorn running on http://127.0.0.1:8001
+
+Backend URL: http://localhost:8001
+
+
+STEP 4: TERMINAL 2 - START FRONTEND
+------------------------------------
+cd frontend
+npm install
+npm start
+
+Expected output:
+Compiled successfully!
+Local: http://localhost:3000
+
+Frontend URL: http://localhost:3000
+
+
+STEP 5: OPEN BROWSER
+---------------------
+Go to: http://localhost:3000
+
+
+================================================================
+  QUICK TEST CHECKLIST
+================================================================
+
+1. Register new user
+2. Login
+3. Upload a document (PDF or text)
+4. Click View button (👁️) to see full content
+5. Ask a question about your document
+6. Click Delete button (🗑️) to delete document
+
+
+================================================================
+  STOPPING THE APPLICATION
+================================================================
+
+To stop Backend (Terminal 1):  Press Ctrl + C
+To stop Frontend (Terminal 2): Press Ctrl + C
+
+
+================================================================
+  TROUBLESHOOTING
+================================================================
+
+Backend won't start?
+  → Run: pip install -r requirements.txt
+
+Frontend won't start?
+  → Run: npm install
+
+Port already in use?
+  → Backend: Change port in command
+  → Frontend: Will auto-suggest port 3001
+
+
+================================================================
+  ENVIRONMENT VARIABLES (Already Configured)
+================================================================
+
+Backend (.env):
+- MONGO_URL=mongodb+srv://prasannagoudasp12_db_user:pTp3DGKPI5yAR96G@cluster0.lzkj7l1.mongodb.net/?appName=Cluster0
+- DATABASE_NAME=docu
+- GEMINI_API_KEY=AIzaSyDpsXHjyqHYMWWRu9yCPGCdEm7EBTjuTwA
+
+Frontend (.env):
+- REACT_APP_BACKEND_URL=http://localhost:8001
+
+
+================================================================
+  FOR MORE HELP
+================================================================
+
+Quick Start:     QUICKSTART.md
+Detailed Setup:  LOCAL_SETUP_GUIDE.md
+Deployment:      DEPLOYMENT_GUIDE_COMPLETE.md
+Database Info:   MONGODB_OPERATIONS_VERIFIED.md
+
+
+================================================================
