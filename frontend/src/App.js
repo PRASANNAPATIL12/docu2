@@ -68,6 +68,74 @@ const SuccessPopup = ({ message, onClose }) => (
   </div>
 );
 
+// Delete Confirmation Dialog
+const DeleteConfirmDialog = ({ documentName, onConfirm, onCancel }) => (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full mx-4">
+      <div className="text-center">
+        <div className="text-red-500 text-5xl mb-4">⚠</div>
+        <h3 className="text-lg font-semibold text-gray-800 mb-2">Delete Document?</h3>
+        <p className="text-gray-600 mb-4">
+          Are you sure you want to delete "<strong>{documentName}</strong>"? This action cannot be undone.
+        </p>
+        <div className="flex space-x-3">
+          <button
+            onClick={onCancel}
+            className="flex-1 bg-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-400 transition duration-200"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="flex-1 bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition duration-200"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+// View Document Modal
+const ViewDocumentModal = ({ document, onClose }) => {
+  if (!document) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[80vh] flex flex-col">
+        <div className="p-6 border-b flex justify-between items-start">
+          <div>
+            <h3 className="text-xl font-semibold text-gray-800">{document.filename}</h3>
+            <p className="text-sm text-gray-500 mt-1">
+              Uploaded: {new Date(document.upload_time).toLocaleString()} • {document.chunk_count} chunks
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+          >
+            ×
+          </button>
+        </div>
+        <div className="p-6 overflow-y-auto flex-1">
+          <div className="prose max-w-none">
+            <p className="text-gray-700 whitespace-pre-wrap">{document.content}</p>
+          </div>
+        </div>
+        <div className="p-4 border-t bg-gray-50 flex justify-end">
+          <button
+            onClick={onClose}
+            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition duration-200"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Components
 const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -203,6 +271,9 @@ const Dashboard = () => {
   const [textContent, setTextContent] = useState('');
   const [addingText, setAddingText] = useState(false);
   const [showTextForm, setShowTextForm] = useState(false);
+  const [viewingDocument, setViewingDocument] = useState(null);
+  const [deletingDocument, setDeletingDocument] = useState(null);
+  const [loadingDocument, setLoadingDocument] = useState(null);
 
   useEffect(() => {
     fetchDocuments();
@@ -305,6 +376,38 @@ const Dashboard = () => {
     }
   };
 
+  const handleViewDocument = async (documentId) => {
+    setLoadingDocument(documentId);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API}/documents/${documentId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setViewingDocument(response.data);
+    } catch (error) {
+      alert('Failed to load document: ' + (error.response?.data?.detail || 'Unknown error'));
+    } finally {
+      setLoadingDocument(null);
+    }
+  };
+
+  const handleDeleteDocument = async () => {
+    if (!deletingDocument) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API}/documents/${deletingDocument.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      alert('Document deleted successfully!');
+      setDeletingDocument(null);
+      fetchDocuments();
+    } catch (error) {
+      alert('Failed to delete document: ' + (error.response?.data?.detail || 'Unknown error'));
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -401,8 +504,8 @@ const Dashboard = () => {
                 ) : (
                   documents.map((doc) => (
                     <div key={doc.id} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex justify-between items-start">
-                        <div>
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex-1">
                           <h4 className="font-medium text-gray-800">{doc.filename}</h4>
                           <p className="text-sm text-gray-500">
                             {new Date(doc.upload_time).toLocaleDateString()} • {doc.chunk_count} chunks
@@ -417,6 +520,25 @@ const Dashboard = () => {
                         }`}>
                           {doc.status}
                         </span>
+                      </div>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => handleViewDocument(doc.id)}
+                          disabled={loadingDocument === doc.id}
+                          className="flex-1 bg-blue-50 text-blue-600 px-3 py-2 rounded-lg hover:bg-blue-100 transition duration-200 text-sm font-medium flex items-center justify-center space-x-1 disabled:opacity-50"
+                          title="View document"
+                        >
+                          <span>{loadingDocument === doc.id ? '⏳' : '👁️'}</span>
+                          <span>View</span>
+                        </button>
+                        <button
+                          onClick={() => setDeletingDocument(doc)}
+                          className="flex-1 bg-red-50 text-red-600 px-3 py-2 rounded-lg hover:bg-red-100 transition duration-200 text-sm font-medium flex items-center justify-center space-x-1"
+                          title="Delete document"
+                        >
+                          <span>🗑️</span>
+                          <span>Delete</span>
+                        </button>
                       </div>
                     </div>
                   ))
@@ -497,6 +619,23 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* View Document Modal */}
+      {viewingDocument && (
+        <ViewDocumentModal
+          document={viewingDocument}
+          onClose={() => setViewingDocument(null)}
+        />
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {deletingDocument && (
+        <DeleteConfirmDialog
+          documentName={deletingDocument.filename}
+          onConfirm={handleDeleteDocument}
+          onCancel={() => setDeletingDocument(null)}
+        />
+      )}
     </div>
   );
 };

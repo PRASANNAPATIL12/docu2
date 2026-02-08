@@ -23,9 +23,9 @@ except ImportError as e:
     print(f"❌ Google Gemini not available: {e}")
     print("⚠️ Falling back to simple responses")
 
-# Import our lightweight modules
+# Import our modules
 from database import db
-from lightweight_embeddings import embeddings_engine
+from gemini_embeddings import embeddings_engine
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -208,9 +208,9 @@ async def upload_document(
     if not text.strip():
         raise HTTPException(status_code=400, detail="Could not extract text from PDF")
     
-    # Process document with improved embeddings
+    # Process document with Gemini embeddings
     chunks = chunk_text(text)
-    embeddings = embeddings_engine.get_embeddings_tfidf(chunks)
+    embeddings = embeddings_engine.get_embeddings(chunks)
     
     # Save to database
     doc_id = str(uuid.uuid4())
@@ -241,9 +241,9 @@ async def add_text_document(
     if not content.strip():
         raise HTTPException(status_code=400, detail="Content cannot be empty")
     
-    # Process text with improved embeddings
+    # Process text with Gemini embeddings
     chunks = chunk_text(content)
-    embeddings = embeddings_engine.get_embeddings_tfidf(chunks)
+    embeddings = embeddings_engine.get_embeddings(chunks)
     
     # Save to database
     doc_id = str(uuid.uuid4())
@@ -270,6 +270,52 @@ async def get_documents(user_id: str = Depends(get_current_user)):
     documents = await db.get_user_documents(user_id)
     return documents
 
+@api_router.get("/documents/{document_id}")
+async def view_document(document_id: str, user_id: str = Depends(get_current_user)):
+    """Get full document content for viewing (read-only)"""
+    document = await db.get_document_by_id(document_id)
+
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    # Verify document belongs to user
+    if document["user_id"] != user_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    # Return document without embeddings (they're large)
+    return {
+        "id": document["id"],
+        "filename": document["filename"],
+        "content": document["content"],
+        "upload_time": document["upload_time"],
+        "chunk_count": document["chunk_count"],
+        "status": document["status"]
+    }
+
+@api_router.delete("/documents/{document_id}")
+async def delete_document(document_id: str, user_id: str = Depends(get_current_user)):
+    """Delete a document (requires user confirmation on frontend)"""
+    document = await db.get_document_by_id(document_id)
+
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    # Verify document belongs to user
+    if document["user_id"] != user_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    # Delete document from database
+    success = await db.delete_document(document_id)
+
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to delete document")
+
+    return {
+        "success": True,
+        "message": "Document deleted successfully",
+        "document_id": document_id
+    }
+
 # Query endpoint
 @api_router.post("/query", response_model=QueryResponse)
 async def query_documents(query: QueryRequest, user_id: str = Depends(get_current_user)):
@@ -295,13 +341,8 @@ async def query_documents(query: QueryRequest, user_id: str = Depends(get_curren
             })
     
     print(f"🔍 Processing query for {len(documents)} documents with {len(all_chunks)} total chunks")
-    
-    # Rebuild embeddings engine with all user document content for consistency
-    embeddings_engine.all_processed_texts = all_chunks
-    embeddings_engine.tfidf_vectorizer = None  # Reset to rebuild
-    embeddings_engine.is_fitted = False
-    
-    # Find relevant chunks across all documents using improved embeddings
+
+    # Find relevant chunks across all documents using Gemini embeddings
     all_relevant_chunks = []
     
     for doc in documents:

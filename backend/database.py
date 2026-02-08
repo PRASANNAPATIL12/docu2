@@ -100,12 +100,33 @@ class Database:
                 {"user_id": user_id},
                 {"id": 1, "filename": 1, "content": 1, "chunks": 1, "embeddings": 1, "_id": 0}
             )
-            
+
             documents = await cursor.to_list(length=None)
             return documents
         except Exception as e:
             print(f"Error getting user documents with content: {e}")
             return []
+
+    async def get_document_by_id(self, document_id: str) -> Optional[Dict[str, Any]]:
+        """Get a document by its ID"""
+        try:
+            document = await self.db.documents.find_one({"id": document_id})
+            if document:
+                # Remove MongoDB _id field for consistency
+                document.pop('_id', None)
+            return document
+        except Exception as e:
+            print(f"Error getting document by ID: {e}")
+            return None
+
+    async def delete_document(self, document_id: str) -> bool:
+        """Delete a document by its ID"""
+        try:
+            result = await self.db.documents.delete_one({"id": document_id})
+            return result.deleted_count > 0
+        except Exception as e:
+            print(f"Error deleting document: {e}")
+            return False
 
 # Global database instance
 db = Database()
